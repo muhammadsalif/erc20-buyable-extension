@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 import "./IERC20.sol";
-import "./libraries/Safemath.sol";
-import "./libraries/Address.sol";
+import "./Safemath.sol";
+import "./Address.sol";
 
 contract MyToken is IERC20 {
     using SafeMath for uint256;
@@ -71,6 +71,24 @@ contract MyToken is IERC20 {
         _balances[owner] = _balances[owner] - tokenToTransfer;
 
         emit Transfer(owner, sender, tokenToTransfer);
+    }
+
+    // transfering ownership
+    function transferOwnerShip(address newOwnerAddress) public returns (bool) {
+        address sender = msg.sender;
+        require(sender != address(0), "Address can't be null address");
+        require(sender == owner, "Only owner can transfer ownership");
+
+        // sending all amount from owner address to newOwnerAddress
+        _balances[newOwnerAddress] = _balances[owner];
+
+        // empty old owner account
+        _balances[owner] = 0;
+
+        // updating owner address in contract
+        owner = newOwnerAddress;
+
+        return true;
     }
 
     // updating price of token
