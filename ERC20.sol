@@ -22,6 +22,7 @@ contract MyToken is IERC20 {
     string symbol;
     uint8 decimals;
     uint256 private priceOfToken;
+    address priceManager;
 
     constructor() {
         name = "MS-Token";
@@ -91,10 +92,27 @@ contract MyToken is IERC20 {
         return true;
     }
 
+    // owner setting manager to manange price of token
+    function setPriceManagerOfToken(address managerAddress)
+        external
+        returns (bool)
+    {
+        address sender = msg.sender;
+        require(
+            sender == owner,
+            "Only owner can approve someone to manage price of tokens"
+        );
+        priceManager = managerAddress;
+        return true;
+    }
+
     // updating price of token
     function updatePricing(uint256 updatedPrice) public returns (bool) {
         address sender = msg.sender;
-        require(sender == owner, "Only owner can change the price of tokens");
+        require(
+            sender == owner || sender == priceManager,
+            "Only owner or Manager can change the price of tokens"
+        );
         priceOfToken = updatedPrice;
         return true;
     }
