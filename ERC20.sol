@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 import "./IERC20.sol";
-import "./libraries/Safemath.sol";
-import "./libraries/Address.sol";
+import "./Safemath.sol";
+import "./Address.sol";
 
 contract MyToken is IERC20 {
     using SafeMath for uint256;
     using Address for address;
 
-    // Mapping hold balances against EOA.
+    // Mapping to hold balances against EOA.
     mapping(address => uint256) private _balances;
+
+    // Mapping to hold timestamp against each entery in balances.
+    mapping(address => uint256) private _timestamps;
 
     // Mapping to hold approved allowances of token to certain address
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -66,6 +69,9 @@ contract MyToken is IERC20 {
 
         // sending token to sender account
         _balances[sender] = _balances[sender] + tokenToTransfer;
+
+        // holding timestamp
+        _timestamps[sender] = block.timestamp;
 
         // Minus total supply
         _totalSupply = _totalSupply - tokenToTransfer;
@@ -148,6 +154,14 @@ contract MyToken is IERC20 {
         require(
             contractCurrentBalanceWei >= weiToBeTransfer,
             "Contract have not sufficient balance remaining"
+        );
+
+        // timeCheck cant be written after the month of buying date
+        // 604799secs = 1week
+
+        require(
+            (_timestamps[sender] + 604799) <= block.timestamp,
+            "Can't refund after 1 week"
         );
 
         // sending back eth to msg.sender account
