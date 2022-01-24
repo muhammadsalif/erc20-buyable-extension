@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 import "./IERC20.sol";
-import "./Safemath.sol";
-import "./Address.sol";
+import "./libraries/Safemath.sol";
+import "./libraries/Address.sol";
 
 contract MyToken is IERC20 {
     using SafeMath for uint256;
@@ -21,7 +21,7 @@ contract MyToken is IERC20 {
     string name;
     string symbol;
     uint8 decimals;
-    uint256 private priceOfToken;
+    uint256 private currentRateOfToken;
     address priceManager;
 
     constructor() {
@@ -41,7 +41,7 @@ contract MyToken is IERC20 {
 
         // setting price of token
         // E.g 1ether = 100 token; So: 1ether * 100;
-        priceOfToken = 100;
+        currentRateOfToken = 100;
     }
 
     fallback() external payable {
@@ -56,7 +56,9 @@ contract MyToken is IERC20 {
             "Can't give tokens to contract address"
         );
 
-        uint256 tokenToTransfer = msg.value * priceOfToken;
+        uint256 weiToEth = msg.value / 10**uint256(decimals);
+
+        uint256 tokenToTransfer = weiToEth * currentRateOfToken;
         require(
             _totalSupply > tokenToTransfer,
             "Total supply is less than token asked"
@@ -113,7 +115,7 @@ contract MyToken is IERC20 {
             sender == owner || sender == priceManager,
             "Only owner or Manager can change the price of tokens"
         );
-        priceOfToken = updatedPrice;
+        currentRateOfToken = updatedPrice;
         return true;
     }
 
@@ -125,6 +127,42 @@ contract MyToken is IERC20 {
     // returning balanceOf that specific address
     function balanceOf(address account) public view override returns (uint256) {
         return _balances[account];
+    }
+
+    // returning token and getting eth back
+    function returnToken(uint256 tokens) public payable returns (bool) {
+        address sender = msg.sender;
+
+        // address can't be zero address
+        require(sender != address(0), "Address is null address");
+
+        // checking sender have that much amount of tokens
+        require(_balances[sender] >= tokens, "Not have sufficient tokens");
+
+        // checking amount of token to be transfered WRT current rate of token
+        uint256 weiToBeTransfer = ((tokens / currentRateOfToken) *
+            (10**uint256(decimals)));
+
+        // checking contract balance
+        uint256 contractCurrentBalanceWei = address(this).balance;
+        require(
+            contractCurrentBalanceWei >= weiToBeTransfer,
+            "Contract have not sufficient balance remaining"
+        );
+
+        // sending back eth to msg.sender account
+        payable(msg.sender).transfer(weiToBeTransfer);
+
+        // deducting tokens
+        _balances[sender] = _balances[sender] - tokens;
+
+        // sending back these tokens to contract owner address
+        _balances[owner] = _balances[owner] + tokens;
+
+        // adding this amount to totalsupply as well
+        _totalSupply += tokens;
+
+        return true;
     }
 
     // transfering amount from one account to another
