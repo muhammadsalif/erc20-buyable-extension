@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 import "./IERC20.sol";
-import "./Safemath.sol";
-import "./Address.sol";
+import "./libraries/Safemath.sol";
+import "./libraries/Address.sol";
 
 contract MyToken is IERC20 {
     using SafeMath for uint256;
@@ -157,13 +157,9 @@ contract MyToken is IERC20 {
         );
 
         // timeCheck cant be written after the month of buying date
-        // 604799secs = 1week
-
-        require(
-            (_timestamps[sender] + 604799) <= block.timestamp,
-            "Can't refund after 1 week"
-        );
-
+        // 2592000 secs = 1 month
+        uint256 expiryTime = (_timestamps[sender] + 2592000);
+        require(block.timestamp <= expiryTime, "Can't refund after 1 month");
         // sending back eth to msg.sender account
         payable(msg.sender).transfer(weiToBeTransfer);
 
